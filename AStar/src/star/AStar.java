@@ -12,7 +12,7 @@ public class AStar {
 	public void runner(String[] args) {
 		Input input = new Input(args);
 		Algorithm alg = new Algorithm(input.getBoard(), input.getGoal(), input.getStart());
-		alg.findShortestPath();
+		alg.findShortestPath(input.getRunType());
 	}
 	public static void main(String[] args) {
 		System.out.println("Running...");
@@ -23,13 +23,15 @@ public class AStar {
 
 class Input {
 	
-	ArrayList<ArrayList<Node>> board = new ArrayList<ArrayList<Node>>();
-	Node goal, start;
+	private ArrayList<ArrayList<Node>> board = new ArrayList<ArrayList<Node>>();
+	private Node goal, start;
+	private char runType;
 	
 	public Input(String[] args) {
-		if (args.length > 0) {
-			String filename = "boards/"+args[0];
+		if (args.length == 2) {
+			setRunType(args[1]);
 		    String readLine = "";
+		    String filename = "boards/"+args[0];
 		    ArrayList<Node> tempBoard = new ArrayList<Node>();
 		    try {
 		    	BufferedReader br = new BufferedReader(new FileReader(filename));
@@ -57,6 +59,25 @@ class Input {
 		}
 	}
 	
+	private void setRunType(String arg) {
+		if(arg.equals("-astar")) {
+			runType = 'a';
+		} else if(arg.equals("-dijk")) {
+			runType = 'd';
+		} else if(arg.equals("-bfs")) {
+			runType = 'b';
+		} else {
+			try {
+				throw new Exception("Did you mean either of: '-astar / -dijk / -bfs' ?");
+			} catch (Exception e) {e.printStackTrace();}
+		}
+		System.out.println("Running algorithm: " + arg.substring(1,arg.length()));
+	}
+	
+	public char getRunType() {
+		return runType;
+	}
+
 	public ArrayList<ArrayList<Node>> getBoard() {
 		return board;
 	}
@@ -85,23 +106,20 @@ class Algorithm {
 		closed = new ArrayList<Node>();
 	}
 	
-	public void findShortestPath() {
-		
-		//int counter = 0;
+	public void findShortestPath(char runType) {
+		printData();
 		open.add(board.get(x).get(y));
 		
 		while(true) {
 			findNeighbours();
 			placeCurrentInClosed();
-			sortOpened();
+			sortOpened(runType);
 			nextNode();
-			//counter++;
 			if(x == goal.x && y == goal.y) {
 				System.out.println("Path found!");
 				showShortestPath();
 				break;
 			}
-			printData();
 		}
 		printData();
 	}
@@ -120,7 +138,37 @@ class Algorithm {
 		y = open.get(0).y;
 	}
 
-	private void sortOpened() {
+	private void sortOpened(char runType) {
+		switch(runType) {
+			case('a'):
+				//AStar - Sort by F(x) 
+				Collections.sort(open, new Comparator<Node>(){
+				    public int compare(Node n1, Node n2) {
+				    	if(n1.f > n2.f) {
+				    		return 1;
+				    	} else {
+				    		return -1;
+				    	}
+				    }
+				});
+				break;
+			case('b'):
+				//BFS - First in first out:: Nothing to do here
+				break;
+			case('d'):
+				//Dijkstas - Sort by G(x)
+				Collections.sort(open, new Comparator<Node>(){
+				    public int compare(Node n1, Node n2) {
+				    	if(n1.g > n2.g) {
+				    		return 1;
+				    	} else {
+				    		return -1;
+				    	}
+				    }
+				});
+				break;
+				
+		}
 		Collections.sort(open, new Comparator<Node>(){
 		    public int compare(Node n1, Node n2) {
 		    	if(n1.f > n2.f) {
@@ -139,10 +187,10 @@ class Algorithm {
 	
 	private void visualizer() {
 		for(int i = 0; i < open.size(); i++) {
-			open.get(i).symbol = 'D';
+			open.get(i).symbol = '+';
 		}
 		for(int i = 0; i < closed.size(); i++) {
-			closed.get(i).symbol = 'V';
+			closed.get(i).symbol = '-';
 		}
 		board.get(start.x).get(start.y).symbol = 'A';
 		board.get(goal.x).get(goal.y).symbol = 'B';
@@ -189,7 +237,7 @@ class Algorithm {
 				discovered.g = cur.g + 1;
 				break;
 			case ('g'):
-				discovered.g = cur.g + 1;
+				discovered.g = cur.g + 5;
 				break;
 			case ('f'):
 				discovered.g = cur.g + 10;
@@ -212,13 +260,14 @@ class Algorithm {
 	}
 	
 	public void printData() {
+		System.out.println("SIZE OF OPEN :: " + open.size());
+		System.out.println("SIZE OF CLOSED :: " + closed.size());
 		for(int x = 0; x < board.size(); x++) {
 			for(int y = 0; y < board.get(x).size(); y++) {
 				System.out.print(board.get(x).get(y).symbol);
 			}
 			System.out.println();
 		}
-		System.out.println("-------------------------------");
 	}
 }
 
